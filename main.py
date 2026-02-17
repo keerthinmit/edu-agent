@@ -1,7 +1,17 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from pymongo import MongoClient
 
 app = FastAPI()
+
+# Enable CORS so frontend (Netlify) can call backend (Render)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # for security, replace "*" with your Netlify domain if you want
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Connect to MongoDB Atlas
 client = MongoClient("mongodb+srv://keerthi:mypassword123@cluster0.jzchadb.mongodb.net/edu_database?retryWrites=true&w=majority")
