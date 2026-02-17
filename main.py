@@ -1,50 +1,79 @@
 from fastapi import FastAPI
 from pymongo import MongoClient
-from fastapi.middleware.cors import CORSMiddleware
-import os
+from bson.json_util import dumps
+import json
 
 app = FastAPI()
 
-# Allow frontend to connect
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# Connect to MongoDB Atlas (we’ll add MONGO_URI later)
-MONGO_URI =  "mongodb+srv://<keerthi>:<mypassword123>@cluster0.jzchadb.mongodb.net/edu_database?appName=Cluster0"
-
-client = MongoClient(MONGO_URI)
+# Connect to MongoDB Atlas
+# Replace <keerthi> and <mypassword123> with your actual Atlas username/password
+client = MongoClient("mongodb+srv://keerthi:mypassword123@cluster0.jzchadb.mongodb.net/edu_database?retryWrites=true&w=majority")
 db = client["edu_database"]
-courses = db["courses"]
-students = db["students"]
+students_collection = db["students"]
+courses_collection = db["courses"]
 
 @app.get("/")
 def home():
-    return {"message": "Educational Agent is running!"}
+    return {"message": "Educational Agent Backend with MongoDB is running!"}
 
+# Add a course
 @app.get("/add_course")
 def add_course(name: str, duration: int):
-    courses.insert_one({"name": name, "duration": duration})
-    return {"status": "Course added"}
+    course = {"name": name, "duration": duration}
+    courses_collection.insert_one(course)
+    return {"status": "Course added", "course": name, "duration": duration}
 
+# Add a student
 @app.get("/add_student")
 def add_student(name: str, progress: int):
-    students.insert_one({"name": name, "progress": progress})
-    return {"status": "Student added"}
+    student = {"name": name, "progress": progress}
+    students_collection.insert_one(student)
+    return {"status": "Student added", "student": name, "progress": progress}
 
-@app.get("/recommend/{student_name}")
-def recommend(student_name: str):
-    student = students.find_one({"name": student_name})
+# Get recommendation for a student
+@app.get("/recommend/{name}")
+def recommend(name: str):
+    student = students_collection.find_one({"name": name})
     if not student:
         return {"error": "Student not found"}
-    if student["progress"] < 50:
-        course = courses.find_one(sort=[("duration", 1)])
+
+    progress = student["progress"]
+    courses = list(courses_collection.find({}))
+
+    if not courses:
+        if progress < 40:
+            return {"recommendation": "Focus on basics first (Beginner courses)"}
+        elif progress < 70:
+            return {"recommendation": "Try intermediate courses to strengthen skills"}
+        elif progress < 90:
+            return {"recommendation": "Advance to specialized topics"}
+        else:
+            return {"recommendation": "Explore advanced projects or mentoring others"}
+
+    # Dynamic recommendation using courses
+    if progress < 40:
+        course = min(courses, key=lambda c: c["duration"])
+        return {"recommendation": f"Start with '{course['name']}' to build fundamentals"}
+    elif progress < 70:
+        sorted_courses = sorted(courses, key=lambda c: c["duration"])
+        mid_index = len(sorted_courses) // 2
+        course = sorted_courses[mid_index]
+        return {"recommendation": f"Take '{course['name']}' to strengthen your skills"}
+    elif progress < 90:
+        course = max(courses, key=lambda c: c["duration"])
+        return {"recommendation": f"Advance with '{course['name']}' for deeper knowledge"}
     else:
-        course = courses.find_one(sort=[("duration", -1)])
-    if course:
-        return {"recommendation": f"Take {course['name']} next"}
-    return {"error": "No courses available"}
+        course = max(courses, key=lambda c: c["duration"])
+        return {"recommendation": f"Master '{course['name']}' and explore projects"}
+
+# Get all courses
+@app.get("/courses")
+def get_courses():
+    courses = list(courses_collection.find({}, {"_id": 0}))
+    return courses
+
+# Get all students
+@app.get("/students")
+def get_students():
+    students = list(students_collection.find({}, {"_id": 0}))
+    return students
