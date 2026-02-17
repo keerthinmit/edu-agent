@@ -15,7 +15,7 @@ app.add_middleware(
 )
 
 # Connect to MongoDB Atlas (we’ll add MONGO_URI later)
-MONGO_URI =  "mongodb+srv://keerthi:mypassword123@cluster0.jzchadb.mongodb.net/edu_database?retryWrites=true&w=majority"
+MONGO_URI =  "mongodb+srv://<keerthi>:<mypassword123>@cluster0.jzchadb.mongodb.net/edu_database?appName=Cluster0"
 
 client = MongoClient(MONGO_URI)
 db = client["edu_database"]
