@@ -1,67 +1,70 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
+import openai
 
-app = FastAPI(title="Educational Agent API")
+app = FastAPI()
 
-# Enable CORS (required for Netlify)
+# Allow frontend (Netlify) to call backend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"],  # For security, replace "*" with your Netlify domain
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# In-memory storage
-courses = []
-students = []
+# Configure OpenAI (set your API key as environment variable in Render)
+openai.api_key = "YOUR_OPENAI_API_KEY"
 
+# --- AI Assistant ---
+@app.get("/ask_ai")
+async def ask_ai(query: str = Query(..., description="User question")):
+    """
+    Chat with AI assistant (EduAgent).
+    """
+    try:
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",   # or "gpt-4" if available
+            messages=[
+                {"role": "system", "content": "You are EduAgent, a helpful AI tutor."},
+                {"role": "user", "content": query}
+            ],
+            max_tokens=200,
+            temperature=0.7
+        )
+        answer = response["choices"][0]["message"]["content"]
+        return {"answer": answer}
+    except Exception as e:
+        return {"answer": f"Error: {str(e)}"}
+
+# --- Course Recommendation Engine ---
+@app.get("/recommend_courses")
+async def recommend_courses(student_name: str, progress: int):
+    """
+    Recommend next courses/topics based on student progress.
+    """
+    try:
+        prompt = f"""
+        A student named {student_name} has {progress}% progress in their current course.
+        Suggest 2-3 next courses or topics they should study, with short explanations.
+        Keep it motivational and concise.
+        """
+
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": "You are EduAgent, an AI that recommends learning paths."},
+                {"role": "user", "content": prompt}
+            ],
+            max_tokens=200,
+            temperature=0.8
+        )
+        recommendations = response["choices"][0]["message"]["content"]
+        return {"recommendations": recommendations}
+    except Exception as e:
+        return {"recommendations": f"Error: {str(e)}"}
+
+# --- Root Endpoint ---
 @app.get("/")
-def root():
-    return {"message": "Educational Agent backend is running!"}
-
-# Add a course
-@app.get("/add_course")
-def add_course(name: str, duration: int):
-    course = {"name": name, "duration": duration}
-    courses.append(course)
-    return {"message": "Course added successfully", "course": course}
-
-# Add a student
-@app.get("/add_student")
-def add_student(name: str, progress: int):
-    student = {"name": name, "progress": progress}
-    students.append(student)
-    return {"message": "Student added successfully", "student": student}
-
-# Get all courses
-@app.get("/courses")
-def get_courses():
-    return courses
-
-# Get all students
-@app.get("/students")
-def get_students():
-    return students
-
-# Recommendation
-@app.get("/recommend/{name}")
-def recommend(name: str):
-    for s in students:
-        if s["name"].lower() == name.lower():
-            if s["progress"] < 50:
-                return {"recommendation": "Focus on fundamentals and beginner courses."}
-            return {"recommendation": "You are ready for advanced courses!"}
-    return {"error": "Student not found"}
-
-# AI Assistant
-@app.get("/ai_recommend")
-def ai_recommend(query: str):
-    q = query.lower()
-    if "python" in q:
-        return {"answer": "I recommend 'Python Basics' for 30 days."}
-    if "java" in q:
-        return {"answer": "Start with 'Java Fundamentals'."}
-    if "data" in q:
-        return {"answer": "Try 'Data Structures & Algorithms'."}
-    return {"answer": "Explore courses based on your current progress."}
+async def root():
+    return {"message": "EduAgent backend is running!"}
