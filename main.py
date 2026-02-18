@@ -1,12 +1,21 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
-app = FastAPI()
+app = FastAPI(title="Educational Agent API")
+
+# Enable CORS (required for Netlify)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # In-memory storage
 courses = []
 students = []
 
-# Root route (so you don’t see "Not Found" at base URL)
 @app.get("/")
 def root():
     return {"message": "Educational Agent backend is running!"}
@@ -35,26 +44,24 @@ def get_courses():
 def get_students():
     return students
 
-# Recommendation based on progress
+# Recommendation
 @app.get("/recommend/{name}")
 def recommend(name: str):
-    for student in students:
-        if student["name"].lower() == name.lower():
-            if student["progress"] < 50:
-                return {"recommendation": "Focus on basics and foundational courses."}
-            else:
-                return {"recommendation": "You are ready for advanced courses!"}
+    for s in students:
+        if s["name"].lower() == name.lower():
+            if s["progress"] < 50:
+                return {"recommendation": "Focus on fundamentals and beginner courses."}
+            return {"recommendation": "You are ready for advanced courses!"}
     return {"error": "Student not found"}
 
-# AI Assistant route
+# AI Assistant
 @app.get("/ai_recommend")
 def ai_recommend(query: str):
-    query_lower = query.lower()
-    if "java" in query_lower:
-        return {"answer": "I recommend starting with 'Java Basics' for 30 days."}
-    elif "python" in query_lower:
-        return {"answer": "Try 'Python for Beginners' — it’s great for fast progress."}
-    elif "data" in query_lower:
-        return {"answer": "Consider 'Data Structures and Algorithms' to strengthen your skills."}
-    else:
-        return {"answer": "Based on your query, I suggest reviewing your current progress and exploring a matching course."}
+    q = query.lower()
+    if "python" in q:
+        return {"answer": "I recommend 'Python Basics' for 30 days."}
+    if "java" in q:
+        return {"answer": "Start with 'Java Fundamentals'."}
+    if "data" in q:
+        return {"answer": "Try 'Data Structures & Algorithms'."}
+    return {"answer": "Explore courses based on your current progress."}
