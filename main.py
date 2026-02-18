@@ -5,6 +5,7 @@ from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 import openai
 import os
+from openai import OpenAI
 
 # Initialize FastAPI app
 app = FastAPI(title="EduAgent Backend", description="AI-powered learning assistant")
@@ -12,7 +13,7 @@ app = FastAPI(title="EduAgent Backend", description="AI-powered learning assista
 # Allow frontend (Netlify) to call backend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # For security, replace "*" with your Netlify domain
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -28,13 +29,10 @@ async def root():
 
 # --- AI Assistant ---
 @app.get("/ask_ai")
-async def ask_ai(query: str = Query(..., description="User question")):
-    """
-    Chat with AI assistant (EduAgent).
-    """
+async def ask_ai(query: str = Query(...)):
     try:
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",   # or "gpt-4" if available
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": "You are EduAgent, a helpful AI tutor."},
                 {"role": "user", "content": query}
@@ -42,7 +40,7 @@ async def ask_ai(query: str = Query(..., description="User question")):
             max_tokens=200,
             temperature=0.7
         )
-        answer = response["choices"][0]["message"]["content"]
+        answer = response.choices[0].message.content
         return {"answer": answer}
     except Exception as e:
         return {"answer": f"Error: {str(e)}"}
@@ -69,7 +67,7 @@ async def recommend_courses(student_name: str, progress: int):
             max_tokens=200,
             temperature=0.8
         )
-        recommendations = response["choices"][0]["message"]["content"]
+        recommendations = response.choices[0].message.content
         return {"recommendations": recommendations}
     except Exception as e:
         return {"recommendations": f"Error: {str(e)}"}
