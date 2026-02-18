@@ -1,8 +1,13 @@
+from fastapi import FastAPI
+app = FastAPI()
+
 from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 import openai
+import os
 
-app = FastAPI()
+# Initialize FastAPI app
+app = FastAPI(title="EduAgent Backend", description="AI-powered learning assistant")
 
 # Allow frontend (Netlify) to call backend
 app.add_middleware(
@@ -13,8 +18,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Configure OpenAI (set your API key as environment variable in Render)
-openai.api_key = "YOUR_OPENAI_API_KEY"
+# Configure OpenAI securely (use environment variable)
+openai.api_key = os.getenv("OPENAI_API_KEY")
+
+# --- Root Endpoint ---
+@app.get("/")
+async def root():
+    return {"message": "EduAgent backend is running!"}
 
 # --- AI Assistant ---
 @app.get("/ask_ai")
