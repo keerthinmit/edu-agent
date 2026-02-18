@@ -1,32 +1,41 @@
 from fastapi import FastAPI
-from pydantic import BaseModel
 
 app = FastAPI()
 
-# In-memory storage (you may already have this)
+# In-memory storage
 courses = []
 students = []
 
+# Root route (so you don’t see "Not Found" at base URL)
+@app.get("/")
+def root():
+    return {"message": "Educational Agent backend is running!"}
+
+# Add a course
 @app.get("/add_course")
 def add_course(name: str, duration: int):
     course = {"name": name, "duration": duration}
     courses.append(course)
     return {"message": "Course added successfully", "course": course}
 
+# Add a student
 @app.get("/add_student")
 def add_student(name: str, progress: int):
     student = {"name": name, "progress": progress}
     students.append(student)
     return {"message": "Student added successfully", "student": student}
 
+# Get all courses
 @app.get("/courses")
 def get_courses():
     return courses
 
+# Get all students
 @app.get("/students")
 def get_students():
     return students
 
+# Recommendation based on progress
 @app.get("/recommend/{name}")
 def recommend(name: str):
     for student in students:
@@ -37,9 +46,7 @@ def recommend(name: str):
                 return {"recommendation": "You are ready for advanced courses!"}
     return {"error": "Student not found"}
 
-# -------------------------------
-# NEW AI Assistant Route
-# -------------------------------
+# AI Assistant route
 @app.get("/ai_recommend")
 def ai_recommend(query: str):
     query_lower = query.lower()
